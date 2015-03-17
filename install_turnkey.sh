@@ -12,5 +12,7 @@ tar -xvf gg2VV-3.1.7.tar.bz2
 # Copy the build clean script into the gg2VV version directory
 cp clean_build.sh gg2VV-3.1.7
 # Run the clean build
+export TOPDIR=$PWD
+export BUILDDIR=$HOME
 cd gg2VV-3.1.7
-./clean_build.sh
+./clean_build.sh "$TOPDIR" "$BUILDDIR"

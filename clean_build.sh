@@ -17,13 +17,13 @@
 # Author: Matthew Feickert <mfeickert@smu.edu>
 # Date: 2013-03-11
 
-if [ "$1" == "verbose" ]; then  # If verbose option then output to stdout
+if [ "$3" == "verbose" ]; then  # If verbose option then output to stdout
   set -v
 fi
 
 ################################################ options #####################################################
-#PROJECTDIR=$HOME/MATH6370	#For Matthew on LXPLUS
-PROJECTDIR=$HOME
+PROJECTDIR=$2
+#PROJECTDIR=$HOME
 # If the build directory doesn't exist, then make it
 if [ ! -d "$PROJECTDIR/gg2VV-new" ]; then
   mkdir -p $PROJECTDIR/gg2VV-new/build-rules # Makes gg2VV-new and build-rules
@@ -36,8 +36,8 @@ fi
 #export PACKDIR=$HOME/gg2VV-new ## where to build & run
 # Local install
 export PACKDIR=$PROJECTDIR/gg2VV-new ## where to build & run
-#export LOADRULESDIR=$PROJECTDIR/project	#For Matthew on LXPLUS
-export LOADRULESDIR=$PWD/..
+export LOADRULESDIR=$1
+#export LOADRULESDIR=$PWD/..
 # copy the Jamrule files form the install dir to the build-rules
 cp $LOADRULESDIR/Jamrules.INTEL_DBLE $PACKDIR/build-rules/      #double precision
 cp $LOADRULESDIR/Jamrules.INTEL_QUAD $PACKDIR/build-rules/      #quad precision
