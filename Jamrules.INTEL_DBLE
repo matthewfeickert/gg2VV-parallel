@@ -1,0 +1,148 @@
+# Jamrules in $(TOPDIR) directory.
+
+PROCMACRO = PROCMACRO_WW2l2v ;        # 2l2v different lepton flavour, WW decay
+#PROCMACRO = PROCMACRO_ZAZ_2l2v ;     # 2l2v different lepton flavour, ZZ decay
+#PROCMACRO = PROCMACRO_WWZAZ_2l2v ;   # 2l2v same lepton flavour
+#PROCMACRO = PROCMACRO_ZAZA2l2l ;
+#PROCMACRO = PROCMACRO_ZAZA4l ;
+
+COMPILER = intel ;
+#COMPILER = gcc ;
+
+PRECISION = double ;
+#PRECISION = quadruple ;
+#PRECISION = mixed ;
+
+OPTIM = ;         # unset built-in OPTIM
+#OPTIM = -g ; FOPTIM = -g ;    # debugging
+
+LIB_TOPDIR ?= /afs/cern.ch/user/n/nkauer/libraries ;
+#LIB_TOPDIR ?= /afs/cern.ch/user/n/nkauer/libraries_slc5 ;
+
+LHAPDF_TOPDIR ?= $(LIB_TOPDIR)/$(COMPILER)/lhapdf ;
+
+OMNIORB_TOPDIR ?= $(LIB_TOPDIR)/$(COMPILER)/omniORB ;
+
+LOOPTOOLS_TOPDIR ?= $(LIB_TOPDIR)/$(COMPILER)/LoopTools ;
+
+LONG_BIT ?= 32 ;     # .bashrc: export LONG_BIT=`getconf LONG_BIT`
+
+if $(LONG_BIT) = 32 {
+  LIBSUBDIR ?= lib ;
+  LIB64SUBDIR ?= lib ;
+  INTELDIR ?= ia32 ;
+}
+if $(LONG_BIT) = 64 {
+  LIBSUBDIR ?= lib ;
+  LIB64SUBDIR ?= lib64 ;
+  INTELDIR ?= intel64 ;
+}
+
+HDRS = ;
+LINKFLAGS = ;
+LINKLIBS = ;
+LASTLINKLIBS = ;
+
+switch $(COMPILER) {
+case gcc :
+  OPTIM ?= -O2 ;
+  CC = gcc ;
+  C++ = g++ ;
+  C++FLAGS += -ansi -pedantic-errors -Wall ;
+  C++FLAGS += -Wno-long-long -Wno-unused -Wno-sign-compare ;
+  FORTRAN = gfortran ;
+  FORTRANFLAGS = $(OPTIM) ;
+  FORTRANFLAGS += -Wuninitialized ; # requires optimization
+  FORTRANFLAGS += -c -ffixed-line-length-none ;
+  FORTRANFLAGS += -x f77-cpp-input ; # run cpp on .f
+  FORTRANFLAGS += -fno-second-underscore ; # C++ code compatibility
+  #FORTRANFLAGS += -ffpe-trap=invalid,zero,overflow,underflow,precision,denormal ; 
+  if $(PRECISION) = quadruple {
+    FORTRANFLAGS += -fdefault-real-8 ;
+  }
+  LINK = $(C++) ;
+  LINKFLAGS += $(OPTIM) ;
+  LINKLIBS += -lquadmath -lgfortran ;
+  LINKLIBS += -lm ;
+case intel :
+  OPTIM ?= -O2 -g ;
+  CC = icc ;
+  C++ = icpc ;
+  C++FLAGS += -fp-trap-all=common ;     # catch common FPEs
+  C++FLAGS += -ansi -wd858 ;
+  #C++FLAGS += -std=c++0x ;
+  FORTRAN = ifort ;
+  FOPTIM ?= -O3 -g ;
+  FORTRANFLAGS = $(FOPTIM) ;
+  FORTRANFLAGS += -fpe0 ;     # catch common FPEs
+  FORTRANFLAGS += -c -extend_source ;
+  FORTRANFLAGS += -fpp ; # run cpp on .f
+  if $(PRECISION) = quadruple {
+    FORTRANFLAGS += -r16 ;     # same as -real_size 128
+  }
+  LINKFLAGS += $(FOPTIM) ;
+  LINK = icpc ;
+  LASTLINKLIBS += -L$(HOME)/intel/lib/$(INTELDIR) -lifport -lifcore -lgfortran ;
+  #LINK = ifort -nofor_main ;
+  # when statically linking with ifort also uncomment:
+  #LASTLINKLIBS += -lstdc++ -lm /home/kauer/without_backup/gcc-4.8.1/lib64/gcc/x86_64-unknown-linux-gnu/4.8.1/libgcc.a /home/kauer/without_backup/gcc-4.8.1/lib64/gcc/x86_64-unknown-linux-gnu/4.8.1/libgcc_eh.a  -lc ;
+}
+
+C++FLAGS += -D$(PROCMACRO) ;
+FORTRANFLAGS += -D$(PROCMACRO) ;
+
+if $(PRECISION) = quadruple {
+  C++FLAGS += -DQUADPREC ;
+  FORTRANFLAGS += -DQUADPREC ;
+}
+
+if $(PRECISION) = mixed {
+  C++FLAGS += -DMIXEDPREC ;
+  FORTRANFLAGS += -DMIXEDPREC ;
+}
+
+STATICLINKFLAG ?= -static ;
+CODESETLINKFLAG ?= -Xlinker -u -Xlinker _omni_CS_8859_1_should_be_linked_but_is_not_ -Xlinker -u -Xlinker _omni_CS_UTF_8_should_be_linked_but_is_not_ -Xlinker -u -Xlinker _omni_CS_UTF_16_should_be_linked_but_is_not_ ;
+# create executables that are independent of external libraries
+#LINKFLAGS += $(STATICLINKFLAG) $(CODESETLINKFLAG) ;
+
+AR = ar ruc ;     # 'c': suppress warning when creating new library file
+
+if $(LONG_BIT) = 32 {
+  CORBA_COMPILE_BIT_FLAG = __x86__ ;
+}
+if $(LONG_BIT) = 64 {
+  CORBA_COMPILE_BIT_FLAG = __x86_64__ ;
+}
+
+CORBA_COMPILE_FLAGS = -D__OMNIORB4__ -D_REENTRANT  -I.
+                      -I$(OMNIORB_TOPDIR)/include
+                      -D$(CORBA_COMPILE_BIT_FLAG)
+                      -D__linux__ -D__OSVERSION__=2 ;
+
+CORBA_LINK_FLAGS = -Wl,-rpath,$(OMNIORB_TOPDIR)/$(LIBSUBDIR)
+                   -L$(OMNIORB_TOPDIR)/$(LIBSUBDIR)
+                   -lomniORB4 -lomnithread -lpthread ;
+
+# omniORB: omniidl generates *.hh and *SK.cc from *.idl ---------
+rule UserObject {
+  switch $(>:S) {
+    case .idl :
+      C++ $(<) : $(<:S=SK.cc) ;
+      Idl $(<:S=.hh) $(<:S=SK.cc) : $(>) ;
+    case * :
+      Exit "Unknown suffix on" $(>) "- see UserObject rule in Jamrules file." ;
+  }
+}
+
+rule Idl {
+  Clean clean : $(<) ;
+  MakeLocate $(<) : $(LOCATE_SOURCE) ;
+  Depends $(<) : $(>) ;
+  Depends files : $(<) ; # causes Idl rule to run before Main, Library rule (headers!)
+}
+
+actions Idl {
+  omniidl -bcxx -C$(>:D) $(>)
+}
+# ---------------------------------------------------------------

@@ -22,16 +22,25 @@ if [ "$1" == "verbose" ]; then  # If verbose option then output to stdout
 fi
 
 ################################################ options #####################################################
-
+#PROJECTDIR=$HOME/MATH6370      # For Matthew on LXPLUS
+PROJECTDIR=$HOME
 # If the build directory doesn't exist, then make it
-if [ ! -d "gg2VV-new" ]; then
-  mkdir ./gg2VV-new
+if [ ! -d "$PROJECTDIR/gg2VV-new" ]; then
+  mkdir -p $PROJECTDIR/gg2VV-new/build-rules # Makes gg2VV-new and build-rules
+  else if [ ! -d "$PROJECTDIR/gg2VV-new/build-rules" ]; then
+    mkdir -p $PROJECTIDR/gg2VV-new/build-rules # Makes gg2VV-new and build-rules
+  fi
 fi
 
 # HOME install
 #export PACKDIR=$HOME/gg2VV-new ## where to build & run
 # Local install
-export PACKDIR=$PWD/gg2VV-new ## where to build & run
+export PACKDIR=$PROJECTDIR/gg2VV-new ## where to build & run
+export LOADRULESDIR=$PROJECTDIR/project
+# copy the Jamrule files form the install dir to the build-rules
+cp $LOADRULESDIR/Jamrules.INTEL_DBLE $PACKDIR/build-rules/      #double precision
+cp $LOADRULESDIR/Jamrules.INTEL_QUAD $PACKDIR/build-rules/      #quad precision
+cp $LOADRULESDIR/Jamrules.INTEL_BOTH $PACKDIR/build-rules/      #mixed precision
 
 #export DOWNLOAD=0 ## set to one to download fresh sources
 export DOWNLOAD=1 ## set to one to download fresh sources       # Set for CLEAN INSTALL
@@ -50,10 +59,10 @@ JAM_VERSION="2.5"
 
 ##############################################################################################################
 
-## for LXPLUS ## 
+## for LXPLUS and MANEFRAME ## 
 
 HOST=$( hostname )
-if [ "${HOST:0:6}" == "lxplus" ]; then
+if [ "${HOST:0:6}" == "lxplus" ] || [ "${HOST:0:7}" == "mflogin" ]; then
     if [ -f /afs/cern.ch/sw/IntelSoftware/linux/all-setup.sh ]; then
 	source /afs/cern.ch/sw/IntelSoftware/linux/all-setup.sh intel64
     fi
